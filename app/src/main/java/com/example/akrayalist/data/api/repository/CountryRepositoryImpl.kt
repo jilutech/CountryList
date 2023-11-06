@@ -10,21 +10,26 @@ class CountryRepositoryImpl () : CountryRepository{
     override suspend fun getCountry(): Resource<CountriesModel> {
         return getCountryList()
     }
-
     private suspend fun getCountryList(): Resource<CountriesModel> {
-
         try {
             val response = RetrofitInstance.api.getCountry()
-            if (response.isSuccessful && response.body() != null) {
-                return Resource.Success(response.body()!!)
-            } else if (response.errorBody() != null) {
-                // Handle error response
-                return Resource.Error("Error occurred", null)
+
+            return if (response.isSuccessful) {
+                val responseBody = response.body()
+                if (responseBody != null) {
+                    Resource.Success(responseBody)
+                } else {
+                    // Handle null response body
+                    Resource.Error("Null response body", null)
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                val errorMessage = errorBody ?: response.message()
+                Resource.Error("Error: ${response.code()} - $errorMessage", null)
             }
         } catch (e: Exception) {
-            // Handle network or parsing exceptions
-            return  Resource.Error("${e.message}Network error", null)
+            return Resource.Error("Network error: ${e.message}", null)
         }
-        return Resource.Error("Un Expected Error occurred", null)
     }
+
 }
